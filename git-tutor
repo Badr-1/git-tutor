@@ -10,6 +10,11 @@ readonly CYAN='\033[1;36m'
 readonly GRAY='\033[1;90m'
 readonly NC='\033[0m' # No Color
 
+print_section_header() {
+    local title=$1
+    echo -en "${PURPLE}$title${NC}\n"
+}
+
 handle_error() {
     local exit_code=$1
     local error_message=$2
@@ -243,6 +248,95 @@ cmd_exe_sandbox() {
     exec 3<&-
 }
 
+cmd_exe_load() {
+    init
+    local dir_name=$1
+    shift
+    local source=("$@")
+    print_section_header "Loading $dir_name"
+    rm -rf "$dir_name" >/dev/null 2>&1
+    git init "$dir_name" >/dev/null 2>&1
+    cd "$dir_name" >/dev/null 2>&1
+    for cmd in "${source[@]}"; do
+        read -ra tokens <<<"$cmd"
+        local cmd=${tokens[1]}
+        local args=${tokens[@]:2}
+        case $cmd in
+        commit)
+            commit $args
+            ;;
+        checkout)
+            checkout $args
+            ;;
+        cherry-pick)
+            cherry_pick $args
+            ;;
+        switch)
+            switch $args
+            ;;
+        merge)
+            merge $args
+            ;;
+        rebase)
+            rebase $args
+            ;;
+        branch)
+            branch $args
+            ;;
+        log)
+            log $args
+            ;;
+        revert)
+            revert $args
+            ;;
+        reset)
+            reset $args
+            ;;
+        esac
+    done
+}
+
+level_1_setup() {
+    level_description="$(
+        cat <<EOF
+description:${NC}
+This level is about creating branches and committing to them
+it's a place to practice using:
+- git commit
+- git branch
+- git checkout\n
+EOF
+    )"
+    level_hint="$(
+        cat <<EOF
+HINT: ${NC}only if there were a command that create and checkout to branch at once!\n
+EOF
+    )"
+    goal=("git commit" "git checkout -b new" "git commit")
+    base=("git commit")
+
+}
+
+level_setup() {
+    local level_name=$1
+    case $level_name in
+    level_1)
+        level_1_setup
+        ;;
+    *)
+        echo "Unknown level: $level_name"
+        exit 1
+        ;;
+    esac
+    level_commands_cnt=$((${#goal[@]} - ${#base[@]}))
+    cmd_exe_load 'goal' "${goal[@]}"
+    log --all
+    cd ..
+    cmd_exe_load 'play' "${base[@]}"
+    log --all
+    play=("${base[@]}")
+}
+
 show_help() {
 
     echo -e "
@@ -276,9 +370,9 @@ ${GREEN}Tool Commands:${NC}
 }
 
 main() {
-    
+
     local mode=$1
-    level_name=$2
+    local level_name=$2
     if [[ $# -eq 0 ]]; then
         show_help
         exit 0
@@ -290,6 +384,8 @@ main() {
         exit 1
     elif [[ $mode == 'sandbox' ]]; then
         cmd_exe_sandbox
+    elif [[ $mode == 'play' ]]; then
+        level_setup "$level_name"
     fi
 }
 

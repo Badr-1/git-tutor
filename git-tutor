@@ -78,6 +78,11 @@ checkout() {
     fi
 }
 
+branch() {
+    git branch "$@" >/dev/null 2>&1
+    handle_error $? "Failed to create branch: $@"
+}
+
 show_help() {
 
     echo -e "

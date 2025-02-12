@@ -165,6 +165,7 @@ rebase() {
 
 init() {
     commits_cnt=0
+    commands_cnt=0
 }
 
 cmd_exe_sandbox() {
@@ -296,6 +297,164 @@ cmd_exe_load() {
     done
 }
 
+game_prompt() {
+    if (($commands_cnt < $level_commands_cnt)); then
+        echo -en "${GREEN}($commands_cnt/$level_commands_cnt)${NC}"
+    else
+        echo -en "${RED}($commands_cnt/$level_commands_cnt)${NC}"
+    fi
+    echo -en "${YELLOW}> "
+    echo -en "${BLUE} "
+}
+
+compare_repos() {
+    echo -ne "${NC}"
+    local play_dir="../play"
+    local goal_dir="../goal"
+
+    [[ ! -d "$play_dir" ]] && echo "Play directory not found" && return 1
+    [[ ! -d "$goal_dir" ]] && echo "Goal directory not found" && return 1
+
+    local play_out="$(cd "$play_dir" && log --all)"
+    local goal_out="$(cd "$goal_dir" && log --all)"
+
+    if [[ "$play_out" == "$goal_out" ]]; then
+        pass=true
+    else
+        pass=false
+    fi
+}
+
+cleanup() {
+    cd .. >/dev/null 2>&1
+    rm -rf goal play
+}
+
+cmd_exe_play() {
+    local level_name=$1
+    exec 3<&0
+    game_prompt
+    while IFS= read -r command <&3; do
+        IFS=' ' read -r -a tokens <<<"$command"
+        if [[ ${tokens[0]} == 'git' ]]; then
+            local cmd=${tokens[1]}
+            local args=${tokens[@]:2}
+            case $cmd in
+            commit)
+                commit $args
+                commands_cnt=$((commands_cnt + 1))
+                ;;
+            checkout)
+                checkout $args
+                commands_cnt=$((commands_cnt + 1))
+                ;;
+            cherry-pick)
+                cherry_pick $args
+                commands_cnt=$((commands_cnt + 1))
+                ;;
+            switch)
+                switch $args
+                commands_cnt=$((commands_cnt + 1))
+                ;;
+            merge)
+                merge $args
+                commands_cnt=$((commands_cnt + 1))
+                ;;
+            branch)
+                branch $args
+                commands_cnt=$((commands_cnt + 1))
+                ;;
+            rebase)
+                rebase $args
+                commands_cnt=$((commands_cnt + 1))
+                ;;
+            log)
+                log $args
+                game_prompt
+                continue
+                ;;
+            revert)
+                revert $args
+                commands_cnt=$((commands_cnt + 1))
+                ;;
+            reset)
+                reset $args
+                commands_cnt=$((commands_cnt + 1))
+                ;;
+            *)
+                echo -ne "${RED}Unknown '$command' command.\nType 'help' for available commands${NC}\n"
+                game_prompt
+                continue
+                ;;
+            esac
+        else
+            case ${tokens[0]} in
+            description)
+                echo -ne "${YELLOW}$level_description${NC}"
+                ;;
+            hint)
+                echo -ne "${YELLOW}$level_hint${NC}"
+                ;;
+            clear)
+                clear
+                cd ..
+                rm -rf goal
+                old_commits_cnt=$commits_cnt
+                old_commands_cnt=$commands_cnt
+                cmd_exe_load 'goal' "${goal[@]}"
+                log --all
+                cd ..
+                print_section_header "Loading play"
+                commits_cnt=$old_commits_cnt
+                commands_cnt=$old_commands_cnt
+                cd play
+                log --all
+                game_prompt
+                continue
+                ;;
+            reset)
+                clear
+                cd ..
+                rm -rf goal play
+                init
+                level_setup $level_name
+                game_prompt
+                continue
+                ;;
+            help)
+                show_help
+                game_prompt
+                continue
+                ;;
+            exit)
+                break
+                ;;
+            *)
+                echo -ne "${RED}Unknown '$command' command.\nType 'help' for available commands${NC}\n"
+                game_prompt
+                continue
+                ;;
+            esac
+        fi
+        play+=("$command")
+        compare_repos
+        if [[ $pass == true ]]; then
+            echo -ne "${GREEN}🎉 Congratulations!${NC}\n"
+            cleanup
+            if (($commands_cnt <= $level_commands_cnt)); then
+                echo -e "${GREEN}The max commands required was '$level_commands_cnt' and yours was '$commands_cnt'${NC}"
+            else
+                echo -e "${RED}The max commands required was '$level_commands_cnt' and yours was '$commands_cnt'${NC}"
+                echo -e "${RED}Try again, but better!${NC}"
+                echo -ne "${YELLOW}$level_hint${NC}"
+            fi
+            exit 0
+        fi
+        game_prompt
+    done
+    cleanup
+}
+
 level_1_setup() {
     level_description="$(
         cat <<EOF
@@ -386,6 +545,7 @@ main() {
         cmd_exe_sandbox
     elif [[ $mode == 'play' ]]; then
         level_setup "$level_name"
+        cmd_exe_play "$level_name"
     fi
 }
 

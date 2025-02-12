@@ -10,20 +10,50 @@ readonly CYAN='\033[1;36m'
 readonly GRAY='\033[1;90m'
 readonly NC='\033[0m' # No Color
 
+show_help() {
 
+    echo -e "
+${GREEN}Usage:${NC} 
+  ${YELLOW}git-tutor play <level_name>${NC}     Start playing a specific level
+  ${YELLOW}git-tutor sandbox${NC}               Start sandbox mode
+
+${GREEN}Levels:${NC}
+  ${YELLOW}level_1${NC}                         Basic commits and branch creation
+
+${GREEN}Git Commands:${NC}
+  ${YELLOW}commit [--amend]${NC}                Create a new commit
+  ${YELLOW}checkout [-b] <ref>${NC}             Checkout or create a branch
+  ${YELLOW}switch [-c] <ref>${NC}               Switch or create a branch
+  ${YELLOW}cherry-pick <commit>${NC}            Cherry-pick a commit to current branch
+  ${YELLOW}rebase <branch>${NC}                 Rebase current branch onto specified branch
+  ${YELLOW}branch <name>${NC}                   Create a new branch
+  ${YELLOW}merge <name>${NC}                    Merge Branches
+  ${YELLOW}log [--all]${NC}                     Show commit history
+  ${YELLOW}revert <commit>${NC}                 Revert a commit
+  ${YELLOW}reset <ref>${NC}                     Reset HEAD to specified commit
+
+${GREEN}Tool Commands:${NC}
+  ${YELLOW}Description${NC}                     Shows Level Description
+  ${YELLOW}Hint${NC}                            Show Hint on How to solve the Level
+  ${YELLOW}clear${NC}                           Clear screen and show progress
+  ${YELLOW}reset${NC}                           Reset current level
+  ${YELLOW}help${NC}                            Show this help message
+  ${YELLOW}exit${NC}                            Exit the game
+"
+}
 
 main() {
     
     local mode=$1
     level_name=$2
     if [[ $# -eq 0 ]]; then
-     
+        show_help
         exit 0
     elif [[ "$#" -ne 2 && "$mode" != 'sandbox' ]]; then
-    
+        show_help
         exit 1
     elif [[ "$mode" != 'play' && "$mode" != 'sandbox' ]]; then
-   
+        show_help
         exit 1
     fi
 }

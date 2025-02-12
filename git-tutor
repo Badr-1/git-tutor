@@ -19,6 +19,22 @@ handle_error() {
     fi
 }
 
+commit() {
+    local amend=$1
+    if [[ $amend = '--amend' ]]; then
+        local message="$(git log -1 --pretty=%B 2>/dev/null)'"
+        git commit --allow-empty --amend -m "$message" >/dev/null 2>&1
+        handle_error $? "Failed to amend commit"
+    else
+        local message="C$commits_cnt"
+        git commit --allow-empty -m "$message" >/dev/null 2>&1
+        handle_error $? "Failed to create commit"
+        commits_cnt=$((commits_cnt + 1))
+    fi
+    git tag "$message" >/dev/null 2>&1
+    handle_error $? "Failed to create tag"
+}
+
 show_help() {
 
     echo -e "

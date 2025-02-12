@@ -10,6 +10,15 @@ readonly CYAN='\033[1;36m'
 readonly GRAY='\033[1;90m'
 readonly NC='\033[0m' # No Color
 
+handle_error() {
+    local exit_code=$1
+    local error_message=$2
+    if [ $exit_code -ne 0 ]; then
+        echo -ne "${RED}Error: $error_message${NC}\n" >&2
+        exit $exit_code
+    fi
+}
+
 show_help() {
 
     echo -e "

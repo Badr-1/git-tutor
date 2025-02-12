@@ -66,6 +66,18 @@ log() {
     fi
 }
 
+checkout() {
+    local target=$1
+    if [ "$target" = '-b' ]; then
+        target=$2
+        git checkout -b "$target" >/dev/null 2>&1
+        handle_error $? "Failed to create and checkout branch: $target"
+    else
+        git checkout "$target" >/dev/null 2>&1
+        handle_error $? "Failed to checkout: $target"
+    fi
+}
+
 show_help() {
 
     echo -e "

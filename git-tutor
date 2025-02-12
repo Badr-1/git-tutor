@@ -35,10 +35,41 @@ commit() {
     handle_error $? "Failed to create tag"
 }
 
+log() {
+    local all="$(echo "$1" | grep -c -- '--all')"
+    echo -en "${CYAN}"
+    if [ $all -ne 0 ]; then
+        git log --all --graph --decorate=short --pretty=format:"%d %s" 2>/dev/null |
+            sed -E "s/tag: [^,)]*,? ?//g" |
+            sed -E "s/, \)/)/g" |
+            sed -E "s/\(\)//g" |
+            awk -v yellow="$YELLOW" -v green="$GREEN" -v blue="$BLUE" -v nc="$NC" '
+    {
+        gsub(/\*/, yellow "&" nc);
+        gsub(/\(.*\)/, green "&" nc);
+        sub(/\) /, blue);
+        print blue $0 nc;
+    }'
+    else
+        git log --graph --decorate=short --pretty=format:"%d %s" 2>/dev/null |
+            sed -E "s/tag: [^,)]*,? ?//g" |
+            sed -E "s/, \)/)/g" |
+            sed -E "s/\(\)//g" |
+            awk -v yellow="$YELLOW" -v green="$GREEN" -v blue="$BLUE" -v nc="$NC" '
+    {
+        gsub(/\*/, yellow "&" nc);
+        gsub(/\(.*\)/, green "&" nc);
+        sub(/\) /, blue);
+        print blue $0 nc;
+    }'
+
+    fi
+}
+
 show_help() {
 
     echo -e "
-${GREEN}Usage:${NC} 
+${GREEN}Usage:${NC}
   ${YELLOW}git-tutor play <level_name>${NC}     Start playing a specific level
   ${YELLOW}git-tutor sandbox${NC}               Start sandbox mode
 

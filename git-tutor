@@ -107,6 +107,12 @@ revert() {
     git tag "$message" >/dev/null 2>&1
 }
 
+reset() {
+    local target=$1
+    git reset --hard "$target" >/dev/null 2>&1
+    handle_error $? "Failed to reset to: $target"
+}
+
 show_help() {
 
     echo -e "

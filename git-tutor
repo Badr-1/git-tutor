@@ -126,6 +126,19 @@ merge() {
     fi
 }
 
+cherry_pick() {
+    local commit=$1
+    local message="$commit'"
+    while ! git tag "$message" 2>/dev/null; do
+        message="$message'"
+    done
+    git tag -d "$message" >/dev/null 2>&1
+    git cherry-pick -n --allow-empty --keep-redundant-commits $commit && git commit --allow-empty -m "$message" >/dev/null 2>&1
+    git tag "$message" >/dev/null 2>&1
+    handle_error $? "Failed to create tag for cherry-pick: $message"
+    commits_cnt=$((commits_cnt + 1))
+}
+
 show_help() {
 
     echo -e "

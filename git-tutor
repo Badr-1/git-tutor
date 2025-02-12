@@ -113,6 +113,19 @@ reset() {
     handle_error $? "Failed to reset to: $target"
 }
 
+merge() {
+    local target=$1
+    local message="C$commits_cnt"
+    git merge --ff-only "$target" -m "$message" >/dev/null 2>&1
+    if [[ $? -ne 0 ]]; then
+        git merge "$target" -m "$message" >/dev/null 2>&1
+        handle_error $? "Failed to merge to: $target" >/dev/null 2>&1
+        commits_cnt=$((commits_cnt + 1))
+        git tag "$message" >/dev/null 2>&1
+        handle_error $? "Failed to create tag $message"
+    fi
+}
+
 show_help() {
 
     echo -e "

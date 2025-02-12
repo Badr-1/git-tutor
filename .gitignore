@@ -1,0 +1,5 @@
+# ignore sandbox mode
+sandbox/
+# ignore playing
+play/
+goal/

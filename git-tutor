@@ -95,6 +95,18 @@ switch() {
     fi
 }
 
+revert() {
+    local target=$1
+    local message="$target'"
+    while ! git tag "$message" 2>/dev/null; do
+        message="$message'"
+    done
+    git tag -d "$message" >/dev/null 2>&1
+    git commit --allow-empty -m "$message" >/dev/null 2>&1
+    handle_error $? "Failed to revert commit: $target"
+    git tag "$message" >/dev/null 2>&1
+}
+
 show_help() {
 
     echo -e "

@@ -158,6 +158,91 @@ rebase() {
     done
 }
 
+init() {
+    commits_cnt=0
+}
+
+cmd_exe_sandbox() {
+    init
+    exec 3<&0
+    rm -rf sandbox >/dev/null 2>&1
+    git init sandbox >/dev/null 2>&1
+    cd sandbox >/dev/null 2>&1
+    show_help
+    echo -en "${YELLOW}> "
+    echo -en "${BLUE} "
+    while IFS= read -r command <&3; do
+        IFS=' ' read -r -a tokens <<<"$command"
+        if [[ ${tokens[0]} == 'git' ]]; then
+            local cmd=${tokens[1]}
+            local args=${tokens[@]:2}
+            case $cmd in
+            commit)
+                commit $args
+                ;;
+            checkout)
+                checkout $args
+                ;;
+            cherry-pick)
+                cherry_pick $args
+                ;;
+            switch)
+                switch $args
+                ;;
+            merge)
+                merge $args
+                ;;
+            rebase)
+                rebase $args
+                ;;
+            branch)
+                branch $args
+                ;;
+            log)
+                log $args
+                ;;
+            revert)
+                revert $args
+                ;;
+            reset)
+                reset $args
+                ;;
+            *)
+                echo -ne "${RED}Unknown '$command' command.\nType 'help' for available commands${NC}\n"
+                ;;
+            esac
+        else
+            case ${tokens[0]} in
+            clear)
+                clear
+                ;;
+            reset)
+                clear
+                cd .. >/dev/null 2>&1
+                rm -rf sandbox
+                init
+                git init sandbox >/dev/null 2>&1
+                cd sandbox >/dev/null 2>&1
+                ;;
+            help)
+                show_help
+                ;;
+            exit)
+                break
+                ;;
+            *)
+                echo -ne "${RED}Unknown '$command' command.\nType 'help' for available commands${NC}\n"
+                ;;
+            esac
+        fi
+        echo -en "${YELLOW}> "
+        echo -en "${BLUE} "
+    done
+    cd .. >/dev/null 2>&1
+    rm -rf sandbox
+    exec 3<&-
+}
+
 show_help() {
 
     echo -e "
@@ -203,6 +288,8 @@ main() {
     elif [[ "$mode" != 'play' && "$mode" != 'sandbox' ]]; then
         show_help
         exit 1
+    elif [[ $mode == 'sandbox' ]]; then
+        cmd_exe_sandbox
     fi
 }
 

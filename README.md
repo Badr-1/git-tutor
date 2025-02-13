@@ -6,7 +6,7 @@ The Whole Idea of it is to create an abstraction for git commands to use them wi
 
 ## Installation
 To install `git-tutor` copy it to a directory included in your `$PATH`.
-this allows you to use it either by `git tutor` as a git extension  or `git-tutor` as a regular command.
+This allows you to use it either by `git tutor` as a git extension or `git-tutor` as a regular command.
 
 ## Usage
 
@@ -33,6 +33,8 @@ Git Commands:
 Tool Commands:
   Description                     Shows Level Description
   Hint                            Show Hint on How to solve the Level
+  base                            Generate a base repository from sandbox for freestyle play
+  goal                            Generate a goal repository from sandbox for freestyle play
   clear                           Clear screen and show progress
   reset                           Reset current level
   help                            Show this help message

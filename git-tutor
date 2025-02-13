@@ -303,6 +303,12 @@ cmd_exe_load() {
 }
 
 game_prompt() {
+    local level=$1
+    if [[ $level == false ]]; then
+        echo -en "${YELLOW}> "
+        echo -en "${BLUE} "
+        return
+    fi
     if (($commands_cnt < $level_commands_cnt)); then
         echo -en "${GREEN}($commands_cnt/$level_commands_cnt)${NC}"
     else
@@ -314,8 +320,8 @@ game_prompt() {
 
 compare_repos() {
     echo -ne "${NC}"
-    local play_dir="../play"
-    local goal_dir="../goal"
+    local play_dir="../$1"
+    local goal_dir="../$2"
 
     [[ ! -d "$play_dir" ]] && echo "Play directory not found" && return 1
     [[ ! -d "$goal_dir" ]] && echo "Goal directory not found" && return 1
@@ -335,10 +341,34 @@ cleanup() {
     rm -rf goal play
 }
 
-cmd_exe_play() {
-    local level_name=$1
+setup_free_play() {
+    cd $goal
+    print_section_header "Loading $goal"
+    log --all
+    cd ..
+    cp -r $base play
+    cd play
+    print_section_header "Loading play"
+    log --all
+}
+
+figure_commit_cnt() {
+    commits_cnt=0
+    message="C$commits_cnt"
+    while ! git tag "$message" 2>/dev/null; do
+        commits_cnt=$((commits_cnt + 1))
+        message="C$commits_cnt"
+    done
+    git tag -d "$message" >/dev/null 2>&1
+}
+
+cmd_exe_free() {
+    local base=$1
+    local goal=$2
+    setup_free_play
+    figure_commit_cnt
     exec 3<&0
-    game_prompt
+    game_prompt false
     while IFS= read -r command <&3; do
         IFS=' ' read -r -a tokens <<<"$command"
         if [[ ${tokens[0]} == 'git' ]]; then
@@ -375,7 +405,7 @@ cmd_exe_play() {
                 ;;
             log)
                 log $args
-                game_prompt
+                game_prompt false
                 continue
                 ;;
             revert)
@@ -388,7 +418,121 @@ cmd_exe_play() {
                 ;;
             *)
                 echo -ne "${RED}Unknown '$command' command.\nType 'help' for available commands${NC}\n"
-                game_prompt
+                game_prompt false
+                continue
+                ;;
+            esac
+        else
+            case ${tokens[0]} in
+            description)
+                echo -ne "${RED}Not Supported In Free Play${NC}"
+                ;;
+            hint)
+                echo -ne "${RED}Not Supported In Free Play${NC}"
+                ;;
+            clear)
+                clear
+                cd ..
+                cd $goal
+                print_section_header "Loading $goal"
+                log --all
+                cd ..
+                cd play
+                print_section_header "Loading play"
+                log --all
+                game_prompt false
+                continue
+                ;;
+            reset)
+                clear
+                cd ..
+                rm -rf play
+                setup_free_play $goal
+                figure_commit_cnt
+                game_prompt false
+                continue
+                ;;
+            help)
+                show_help
+                game_prompt false
+                continue
+                ;;
+            exit)
+                break
+                ;;
+            *)
+                echo -ne "${RED}Unknown '$command' command.\nType 'help' for available commands${NC}\n"
+                game_prompt false
+                continue
+                ;;
+            esac
+        fi
+        play+=("$command")
+        compare_repos play $goal
+        if [[ $pass == true ]]; then
+            echo -ne "${GREEN}🎉 Congratulations!${NC}\n"
+            break
+        fi
+        game_prompt false
+    done
+    cd .. >/dev/null 2>&1
+    rm -rf play
+}
+
+cmd_exe_play() {
+    local level_name=$1
+    exec 3<&0
+    game_prompt true
+    while IFS= read -r command <&3; do
+        IFS=' ' read -r -a tokens <<<"$command"
+        if [[ ${tokens[0]} == 'git' ]]; then
+            local cmd=${tokens[1]}
+            local args=${tokens[@]:2}
+            case $cmd in
+            commit)
+                commit $args
+                commands_cnt=$((commands_cnt + 1))
+                ;;
+            checkout)
+                checkout $args
+                commands_cnt=$((commands_cnt + 1))
+                ;;
+            cherry-pick)
+                cherry_pick $args
+                commands_cnt=$((commands_cnt + 1))
+                ;;
+            switch)
+                switch $args
+                commands_cnt=$((commands_cnt + 1))
+                ;;
+            merge)
+                merge $args
+                commands_cnt=$((commands_cnt + 1))
+                ;;
+            branch)
+                branch $args
+                commands_cnt=$((commands_cnt + 1))
+                ;;
+            rebase)
+                rebase $args
+                commands_cnt=$((commands_cnt + 1))
+                ;;
+            log)
+                log $args
+                game_prompt true
+                continue
+                ;;
+            revert)
+                revert $args
+                commands_cnt=$((commands_cnt + 1))
+                ;;
+            reset)
+                reset $args
+                commands_cnt=$((commands_cnt + 1))
+                ;;
+            *)
+                echo -ne "${RED}Unknown '$command' command.\nType 'help' for available commands${NC}\n"
+                game_prompt true
                 continue
                 ;;
             esac
@@ -414,7 +558,7 @@ cmd_exe_play() {
                 commands_cnt=$old_commands_cnt
                 cd play
                 log --all
-                game_prompt
+                game_prompt true
                 continue
                 ;;
             reset)
@@ -424,12 +568,12 @@ cmd_exe_play() {
                 commits_cnt=0
                 commands_cnt=0
                 level_setup $level_name
-                game_prompt
+                game_prompt true
                 continue
                 ;;
             help)
                 show_help
-                game_prompt
+                game_prompt true
                 continue
                 ;;
             exit)
@@ -437,13 +581,13 @@ cmd_exe_play() {
                 ;;
             *)
                 echo -ne "${RED}Unknown '$command' command.\nType 'help' for available commands${NC}\n"
-                game_prompt
+                game_prompt true
                 continue
                 ;;
             esac
         fi
         play+=("$command")
-        compare_repos
+        compare_repos play goal
         if [[ $pass == true ]]; then
             echo -ne "${GREEN}🎉 Congratulations!${NC}\n"
             cleanup
@@ -456,7 +600,7 @@ cmd_exe_play() {
             fi
             exit 0
         fi
-        game_prompt
+        game_prompt true
     done
     cleanup
 }
@@ -506,7 +650,8 @@ show_help() {
 
     echo -e "
 ${GREEN}Usage:${NC}
-  ${YELLOW}git-tutor play <level_name>${NC}     Start playing a specific level
+  ${YELLOW}git-tutor play${NC}                  Start playing a specific level
+  ${YELLOW}git-tutor free <base> <target>${NC}  Start Playing in freestyle
   ${YELLOW}git-tutor sandbox${NC}               Start sandbox mode
 
 ${GREEN}Levels:${NC}
@@ -549,6 +694,10 @@ main() {
             local level_name=$2
             level_setup "$level_name"
             cmd_exe_play "$level_name"
+        elif [[ "$#" -eq 3 ]]; then
+            local base=$2
+            local goal=$3
+            cmd_exe_free "$base" "$goal"
         else
             show_help
             exit 1

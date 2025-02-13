@@ -628,38 +628,9 @@ cmd_exe_play() {
     cleanup
 }
 
-level_1_setup() {
-    level_description="$(
-        cat <<EOF
-description:${NC}
-This level is about creating branches and committing to them
-it's a place to practice using:
-- git commit
-- git branch
-- git checkout\n
-EOF
-    )"
-    level_hint="$(
-        cat <<EOF
-HINT: ${NC}only if there were a command that create and checkout to branch at once!\n
-EOF
-    )"
-    goal=("git commit" "git checkout -b new" "git commit")
-    base=("git commit")
-
-}
-
 level_setup() {
     local level_name=$1
-    case $level_name in
-    level_1)
-        level_1_setup
-        ;;
-    *)
-        echo "Unknown level: $level_name"
-        exit 1
-        ;;
-    esac
+    levels $level_name
     level_commands_cnt=$((${#goal[@]} - ${#base[@]}))
     cmd_exe_load 'goal' "${goal[@]}"
     cd ..
@@ -675,11 +646,8 @@ show_help() {
     echo -e "
 ${GREEN}Usage:${NC}
   ${YELLOW}git-tutor play${NC}                  Start playing a specific level
-  ${YELLOW}git-tutor free <base> <target>${NC}  Start Playing in freestyle
+  ${YELLOW}git-tutor diff <base> <target>${NC}  Start Playing in freestyle
   ${YELLOW}git-tutor sandbox${NC}               Start sandbox mode
-
-${GREEN}Levels:${NC}
-  ${YELLOW}level_1${NC}                         Basic commits and branch creation
 
 ${GREEN}Git Commands:${NC}
   ${YELLOW}commit [--amend]${NC}                Create a new commit
@@ -705,27 +673,74 @@ ${GREEN}Tool Commands:${NC}
 "
 }
 
-main() {
+install_plugins() {
+    plugins=($(ls ~/.git-tutor/*.gt 2>/dev/null))
 
+    if [ ${#plugins[@]} -eq 0 ]; then
+        echo -e "${CYAN}No plugins found in ~/.git-tutor${NC}"
+        exit 1
+    fi
+    echo -e "${CYAN}Available Plugins (~/.git-tutor)${NC}"
+    for i in "${!plugins[@]}"; do
+        echo -e "${YELLOW}[$((i + 1))] $(basename "${plugins[i]}")${NC}"
+    done
+    while true; do
+        echo -e "${CYAN}Enter the number of the plugin to use ${RED}(type exit to quit)"
+        game_prompt false
+        read -r choice
+        if [[ ! "$choice" =~ ^[0-9]+$ ]] || ((choice < 1 || choice > ${#plugins[@]})); then
+            if [[ "$choice" == 'exit' ]]; then
+                exit 0
+            else
+                echo -e "${RED}Invalid plugin number. Please try again.${NC}"
+            fi
+        else
+            break
+        fi
+    done
+    choice=$((choice - 1))
+    selected_plugin="${plugins[choice]}"
+    source "$selected_plugin"
+    echo -e "${GREEN}Plugin $(basename "$selected_plugin") loaded successfully!${NC}"
+}
+
+choose_level() {
+    selected_level=""
+    levels_description
+    while true; do
+        echo -e "${CYAN}Enter the level name to proceed ${RED}(type exit to quit)"
+        game_prompt false
+        read -r choice
+        if [[ ! "$choice" =~ ^[0-9]+$ ]] || ((choice < 1 || choice > ${#levels_titles[@]})); then
+            if [[ "$choice" == 'exit' ]]; then
+                exit 0
+            else
+                echo -e "${RED}Invalid level number. Please try again.${NC}"
+            fi
+        else
+            break
+        fi
+    done
+    choice=$((choice - 1))
+    selected_level="${levels_titles[choice]}"
+}
+
+main() {
     local mode=$1
     if [[ "$#" -eq 0 ]]; then
         show_help
         exit 0
     elif [[ "$mode" == 'sandbox' && "$#" -eq 1 ]]; then
         cmd_exe_sandbox
-    elif [[ "$mode" == 'play' ]]; then
-        if [[ "$#" -eq 2 ]]; then
-            local level_name=$2
-            level_setup "$level_name"
-            cmd_exe_play "$level_name"
-        elif [[ "$#" -eq 3 ]]; then
-            local base=$2
-            local goal=$3
-            cmd_exe_free "$base" "$goal"
-        else
-            show_help
-            exit 1
-        fi
+    elif [[ "$mode" == 'play' && "$#" -eq 1 ]]; then
+        install_plugins
+        choose_level
+        level_setup "$selected_level"
+        cmd_exe_play "$selected_level"
+    elif [[ "$mode" == 'diff' && "$#" -eq 3 ]]; then
+        local base=$2
+        local goal=$3
+        cmd_exe_free "$base" "$goal"
     else
         show_help
         exit 1

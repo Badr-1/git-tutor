@@ -1,0 +1,67 @@
+level_1_setup() {
+    level_description="$(
+        cat <<EOF
+description:${NC}
+This level is about creating branches and committing to them
+it's a place to practice using:
+- git commit
+- git branch
+- git checkout\n
+EOF
+    )"
+    level_hint="$(
+        cat <<EOF
+HINT: ${NC}only if there were a command that create and checkout to branch at once!\n
+EOF
+    )"
+    goal=("git commit" "git checkout -b new" "git commit")
+    base=("git commit")
+
+}
+
+level_2_setup() {
+    level_description="$(
+        cat <<EOF
+description:${NC}
+This level is about creating branches and committing to them
+it's a place to practice using:
+- git commit
+- git branch
+- git checkout
+- git merge
+EOF
+    )"
+    level_hint="$(
+        cat <<EOF
+HINT: ${NC}only if there were a command that create and checkout to branch at once!\n
+EOF
+    )"
+    goal=("git commit" "git checkout -b new" "git commit" "git checkout main" "git commit" "git merge new")
+    base=("git commit" "git checkout -b new" )
+
+}
+
+levels_description() {
+    levels_titles=("level_1" "level_2")
+    levels_overviews=("Basic commits and branch creation" "Merging Branches")
+    echo -e "${CYAN}Available Levels${NC}"
+    for i in "${!levels_titles[@]}"; do
+        echo -e "${YELLOW}[$i] ${levels_titles[i]}${NC}\t\t\t  ${levels_overviews[i]}"
+    done
+}
+
+levels() {
+    local level_name=$1
+    case $level_name in
+    level_1)
+        level_1_setup
+        ;;
+    level_2)
+        level_2_setup
+        ;;
+    *)
+        echo "Unknown level: $level_name"
+        exit 1
+        ;;
+    esac
+}

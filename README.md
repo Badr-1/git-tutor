@@ -12,11 +12,9 @@ This allows you to use it either by `git tutor` as a git extension or `git-tutor
 
 ```
 Usage: 
-  git-tutor play <level_name>     Start playing a specific level
+  git-tutor play                  Start playing a specific level
+  git-tutor diff <base> <target>  Start Playing in freestyle
   git-tutor sandbox               Start sandbox mode
-
-Levels:
-  level_1                         Basic commits and branch creation
 
 Git Commands:
   commit [--amend]                Create a new commit
@@ -40,6 +38,12 @@ Tool Commands:
   help                            Show this help message
   exit                            Exit the game
 ```
+
+git-tutor supports three distinct modes:
+- sandbox: for experiments
+- guided tutorials: based on levels
+- freestyle: how to shape a repository into another
+
 ## How To Contribute
 
 There are **Three** ways you could contribute with:
@@ -50,6 +54,8 @@ Each level consists of the following:
 - Hint: How to solve the level?
 - Goal
 - Base
+
+Levels are now bundled outside `git-tutor` for extensibility into plugins see [plugin.gt](/plugin.gt) with extension `gt` and put into `~/.git-tutor` directory.
 
 ### Second: New Commands
 The available commands now aren't much, and commands options aren't fully implemented.\

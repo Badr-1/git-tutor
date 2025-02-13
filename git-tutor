@@ -249,7 +249,6 @@ cmd_exe_load() {
     local dir_name=$1
     shift
     local source=("$@")
-    print_section_header "Loading $dir_name"
     rm -rf "$dir_name" >/dev/null 2>&1
     git init "$dir_name" >/dev/null 2>&1
     cd "$dir_name" >/dev/null 2>&1
@@ -331,15 +330,56 @@ cleanup() {
     rm -rf goal play
 }
 
-setup_free_play() {
-    cd $goal
-    print_section_header "Loading $goal"
-    log --all
+display_log() {
+    local play=$1
+    local goal=$2
+
+    cd $play
+    play_log=$(print_section_header "Loading Play\n")
+    play_log+="$(log --all)"
     cd ..
+
+    cd $goal
+    goal_log=$(print_section_header "Loading Goal\n")
+    goal_log+="$(log --all)"
+    cd ..
+
+    # Create temporary files for strings
+    temp1=$(mktemp)
+    temp2=$(mktemp)
+
+    # Convert strings to lines by replacing newlines and write to temp files
+    echo -e "$play_log" >"$temp1"
+    echo -e "$goal_log" >"$temp2"
+
+    # Get the length of both string arrays
+    len1=$(wc -l <"$temp1")
+    len2=$(wc -l <"$temp2")
+
+    # Find the maximum length
+    max_len=$((len1 > len2 ? len1 : len2))
+
+    # Add padding to strings and combine with vertical separator
+    paste <(
+        cat "$temp1"
+        if [ $len1 -lt $max_len ]; then yes "" | head -n $((max_len - len1)); fi
+    ) \
+        <(yes "|" | head -n $max_len) \
+        <(
+            cat "$temp2"
+            if [ $len2 -lt $max_len ]; then yes "" | head -n $((max_len - len2)); fi
+        ) |
+        column -t -s $'\t'
+
+    # Clean up temporary files
+    rm "$temp1" "$temp2"
+}
+
+setup_free_play() {
+    local goal=$1
     cp -r $base play
+    display_log play $goal
     cd play
-    print_section_header "Loading play"
-    log --all
 }
 
 figure_commit_cnt() {
@@ -355,7 +395,7 @@ figure_commit_cnt() {
 cmd_exe_free() {
     local base=$1
     local goal=$2
-    setup_free_play
+    setup_free_play $goal
     figure_commit_cnt
     exec 3<&0
     game_prompt false
@@ -423,13 +463,8 @@ cmd_exe_free() {
             clear)
                 clear
                 cd ..
-                cd $goal
-                print_section_header "Loading $goal"
-                log --all
-                cd ..
+                display_log play $goal
                 cd play
-                print_section_header "Loading play"
-                log --all
                 game_prompt false
                 continue
                 ;;
@@ -541,13 +576,11 @@ cmd_exe_play() {
                 old_commits_cnt=$commits_cnt
                 old_commands_cnt=$commands_cnt
                 cmd_exe_load 'goal' "${goal[@]}"
-                log --all
                 cd ..
-                print_section_header "Loading play"
                 commits_cnt=$old_commits_cnt
                 commands_cnt=$old_commands_cnt
+                display_log play goal
                 cd play
-                log --all
                 game_prompt true
                 continue
                 ;;
@@ -629,10 +662,11 @@ level_setup() {
     esac
     level_commands_cnt=$((${#goal[@]} - ${#base[@]}))
     cmd_exe_load 'goal' "${goal[@]}"
-    log --all
     cd ..
     cmd_exe_load 'play' "${base[@]}"
-    log --all
+    cd ..
+    display_log play goal
+    cd play
     play=("${base[@]}")
 }
 

@@ -76,15 +76,8 @@ log() {
 }
 
 checkout() {
-    local target=$1
-    if [ "$target" = '-b' ]; then
-        target=$2
-        git checkout -b "$target" >/dev/null 2>&1
-        handle_error $? "Failed to create and checkout branch: $target"
-    else
-        git checkout "$target" >/dev/null 2>&1
-        handle_error $? "Failed to checkout: $target"
-    fi
+    git checkout "$@" >/dev/null 2>&1
+    handle_error $? "Failed to checkout: $@"
 }
 
 branch() {
@@ -93,15 +86,8 @@ branch() {
 }
 
 switch() {
-    local target=$1
-    if [ "$target" = '-c' ]; then
-        target=$2
-        git switch -c "$target" >/dev/null 2>&1
-        handle_error $? "Failed to create and switch to branch: $target"
-    else
-        git switch "$target" >/dev/null 2>&1
-        handle_error $? "Failed to switch to: $target"
-    fi
+    git switch "$@" >/dev/null 2>&1
+    handle_error $? "Failed to switch to: $@"
 }
 
 revert() {

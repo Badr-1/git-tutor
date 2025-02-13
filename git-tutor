@@ -28,6 +28,10 @@ commit() {
     local amend=$1
     if [[ $amend = '--amend' ]]; then
         local message="$(git log -1 --pretty=%B 2>/dev/null)'"
+        while ! git tag "$message" 2>/dev/null; do
+            message="$message'"
+        done
+        git tag -d "$message" >/dev/null 2>&1
         git commit --allow-empty --amend -m "$message" >/dev/null 2>&1
         handle_error $? "Failed to amend commit"
     else

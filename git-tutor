@@ -217,6 +217,15 @@ cmd_exe_sandbox() {
             clear)
                 clear
                 ;;
+            base)
+                rm -rf ../base
+                cp -r ../sandbox ../base
+                ;;
+            goal)
+                rm -rf ../goal
+                cp -r ../sandbox ../goal
+                break
+                ;;
             reset)
                 clear
                 cd .. >/dev/null 2>&1
@@ -518,6 +527,8 @@ ${GREEN}Git Commands:${NC}
 ${GREEN}Tool Commands:${NC}
   ${YELLOW}Description${NC}                     Shows Level Description
   ${YELLOW}Hint${NC}                            Show Hint on How to solve the Level
+  ${YELLOW}base${NC}                            Generate a base repository from sandbox for freestyle play
+  ${YELLOW}goal${NC}                            Generate a goal repository from sandbox for freestyle play
   ${YELLOW}clear${NC}                           Clear screen and show progress
   ${YELLOW}reset${NC}                           Reset current level
   ${YELLOW}help${NC}                            Show this help message

@@ -163,13 +163,8 @@ rebase() {
     done
 }
 
-init() {
-    commits_cnt=0
-    commands_cnt=0
-}
-
 cmd_exe_sandbox() {
-    init
+    commits_cnt=0
     exec 3<&0
     rm -rf sandbox >/dev/null 2>&1
     git init sandbox >/dev/null 2>&1
@@ -226,7 +221,7 @@ cmd_exe_sandbox() {
                 clear
                 cd .. >/dev/null 2>&1
                 rm -rf sandbox
-                init
+                commits_cnt=0
                 git init sandbox >/dev/null 2>&1
                 cd sandbox >/dev/null 2>&1
                 ;;
@@ -250,7 +245,8 @@ cmd_exe_sandbox() {
 }
 
 cmd_exe_load() {
-    init
+    commits_cnt=0
+    commands_cnt=0
     local dir_name=$1
     shift
     local source=("$@")
@@ -416,7 +412,8 @@ cmd_exe_play() {
                 clear
                 cd ..
                 rm -rf goal play
-                init
+                commits_cnt=0
+                commands_cnt=0
                 level_setup $level_name
                 game_prompt
                 continue

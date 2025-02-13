@@ -531,21 +531,23 @@ ${GREEN}Tool Commands:${NC}
 main() {
 
     local mode=$1
-    local level_name=$2
-    if [[ $# -eq 0 ]]; then
+    if [[ "$#" -eq 0 ]]; then
         show_help
         exit 0
-    elif [[ "$#" -ne 2 && "$mode" != 'sandbox' ]]; then
-        show_help
-        exit 1
-    elif [[ "$mode" != 'play' && "$mode" != 'sandbox' ]]; then
-        show_help
-        exit 1
-    elif [[ $mode == 'sandbox' ]]; then
+    elif [[ "$mode" == 'sandbox' && "$#" -eq 1 ]]; then
         cmd_exe_sandbox
-    elif [[ $mode == 'play' ]]; then
-        level_setup "$level_name"
-        cmd_exe_play "$level_name"
+    elif [[ "$mode" == 'play' ]]; then
+        if [[ "$#" -eq 2 ]]; then
+            local level_name=$2
+            level_setup "$level_name"
+            cmd_exe_play "$level_name"
+        else
+            show_help
+            exit 1
+        fi
+    else
+        show_help
+        exit 1
     fi
 }
 

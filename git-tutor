@@ -157,7 +157,7 @@ cmd_exe_sandbox() {
     commits_cnt=0
     exec 3<&0
     rm -rf sandbox >/dev/null 2>&1
-    git init sandbox >/dev/null 2>&1
+    git init -b main sandbox >/dev/null 2>&1
     cd sandbox >/dev/null 2>&1
     show_help
     echo -en "${YELLOW}> "
@@ -221,7 +221,7 @@ cmd_exe_sandbox() {
                 cd .. >/dev/null 2>&1
                 rm -rf sandbox
                 commits_cnt=0
-                git init sandbox >/dev/null 2>&1
+                git init -b main sandbox >/dev/null 2>&1
                 cd sandbox >/dev/null 2>&1
                 ;;
             help)
@@ -250,7 +250,7 @@ cmd_exe_load() {
     shift
     local source=("$@")
     rm -rf "$dir_name" >/dev/null 2>&1
-    git init "$dir_name" >/dev/null 2>&1
+    git init -b main "$dir_name" >/dev/null 2>&1
     cd "$dir_name" >/dev/null 2>&1
     for cmd in "${source[@]}"; do
         read -ra tokens <<<"$cmd"

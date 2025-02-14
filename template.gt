@@ -1,0 +1,86 @@
+# ~/.git-tutor/template.gt
+# Git-Tutor Plugin Template
+# -----------------------
+# Copy this file to create a new plugin
+
+# Required: Plugin metadata
+PLUGIN_NAME="Demo Plugin"
+PLUGIN_DESCRIPTION="Basic git branching"
+PLUGIN_VERSION="1.0"
+PLUGIN_AUTHOR="Badr Mohamed"
+
+# Required: Plugin initialization function
+plugin_init() {
+  echo "$PLUGIN_NAME|$PLUGIN_DESCRIPTION|$PLUGIN_VERSION|$PLUGIN_AUTHOR"
+}
+
+# Required: Level setup functions
+# Each level must have its own setup function
+level_1_setup() {
+  level_description="$(
+        cat <<EOF
+description:${NC}
+This level is about creating branches and committing to them
+it's a place to practice using:
+- git commit
+- git branch
+- git checkout\n
+EOF
+    )"
+    level_hint="$(
+        cat <<EOF
+HINT: ${NC}only if there were a command that create and checkout to branch at once!\n
+EOF
+    )"
+    goal=("git commit" "git checkout -b new" "git commit")
+    base=("git commit")
+}
+
+level_2_setup() {
+   level_description="$(
+        cat <<EOF
+description:${NC}
+This level is about creating branches and committing to them
+it's a place to practice using:
+- git commit
+- git branch
+- git checkout
+- git merge
+EOF
+    )"
+    level_hint="$(
+        cat <<EOF
+HINT: ${NC}only if there were a command that create and checkout to branch at once!\n
+EOF
+    )"
+    goal=("git commit" "git checkout -b new" "git commit" "git checkout main" "git commit" "git merge new")
+    base=("git commit" "git checkout -b new" )
+}
+
+# Required: Function to describe available levels
+levels_description() {
+  levels_titles=("level_1" "level_2")
+  levels_overviews=("Basic commits and branch creation" "Merging Branches")
+  
+  echo -e "${CYAN}Available Levels${NC}"
+  for i in "${!levels_titles[@]}"; do
+    echo -e "${YELLOW}[$((i+1))] ${levels_titles[i]}${NC}\t\t\t ${levels_overviews[i]}"
+  done
+}
+
+# Required: Function to set up a specific level
+levels() {
+  local level_name=$1
+  case $level_name in
+  level_1)
+    level_1_setup
+    ;;
+  level_2)
+    level_2_setup
+    ;;
+  *)
+    echo "Unknown level: $level_name"
+    exit 1
+    ;;
+  esac
+}

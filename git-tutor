@@ -673,6 +673,23 @@ ${GREEN}Tool Commands:${NC}
 "
 }
 
+load_plugin() {
+    local plugin_file=$1
+    source "$plugin_file"
+    if ! declare -F plugin_init >/dev/null ||
+        ! declare -F levels_description >/dev/null ||
+        ! declare -F levels >/dev/null; then
+        echo -e "${RED}Error: Invalid plugin format in $plugin_file${NC}"
+        echo -e "${RED}Plugin must define plugin_init, levels_description, and levels functions${NC}"
+        return 1
+    fi
+    IFS='|' read -r plugin_name plugin_description plugin_version plugin_author < <(plugin_init)
+    echo -e "${GREEN}Loaded plugin: $plugin_name v$plugin_version${NC}"
+    echo -e "${GRAY}$plugin_description${NC}"
+    echo -e "${GRAY}Created by: $plugin_author${NC}"
+    return 0
+}
+
 install_plugins() {
     plugins=($(ls ~/.git-tutor/*.gt 2>/dev/null))
 
@@ -680,9 +697,24 @@ install_plugins() {
         echo -e "${CYAN}No plugins found in ~/.git-tutor${NC}"
         exit 1
     fi
-    echo -e "${CYAN}Available Plugins (~/.git-tutor)${NC}"
+
+    echo -e "${CYAN}Available Plugins:${NC}"
     for i in "${!plugins[@]}"; do
-        echo -e "${YELLOW}[$((i + 1))] $(basename "${plugins[i]}")${NC}"
+        plugin_file="${plugins[$i]}"
+
+        # Source temporarily to get metadata
+        (
+            source "$plugin_file"
+            if declare -F plugin_init >/dev/null; then
+                IFS='|' read -r name description version author < <(plugin_init)
+                echo -e "${YELLOW}[$((i + 1))] $name v$version${NC}"
+                echo -e "   ${GRAY}$description${NC}"
+                echo -e "   ${GRAY}Author: $author${NC}"
+            else
+                echo -e "${YELLOW}[$((i + 1))] $(basename "$plugin_file")${NC}"
+                echo -e "   ${GRAY}(No metadata available)${NC}"
+            fi
+        )
     done
     while true; do
         echo -e "${CYAN}Enter the number of the plugin to use ${RED}(type exit to quit)"
@@ -700,8 +732,10 @@ install_plugins() {
     done
     choice=$((choice - 1))
     selected_plugin="${plugins[choice]}"
-    source "$selected_plugin"
-    echo -e "${GREEN}Plugin $(basename "$selected_plugin") loaded successfully!${NC}"
+    if ! load_plugin "$selected_plugin"; then
+        echo -e "${RED}Failed to load plugin. Please check its format.${NC}"
+        exit 1
+    fi
 }
 
 choose_level() {

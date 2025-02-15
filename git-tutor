@@ -444,6 +444,7 @@ cmd_exe_free() {
                 continue
                 ;;
             esac
+            play_log="$(log --all)"
         else
             case ${tokens[0]} in
             description)
@@ -482,6 +483,7 @@ cmd_exe_free() {
                 ;;
             esac
         fi
+        display_log "$play_log" "$goal_log"
         play+=("$command")
         compare_repos
         if [[ $pass == true ]]; then
@@ -552,6 +554,7 @@ cmd_exe_play() {
                 continue
                 ;;
             esac
+            play_log="$(log --all)"
         else
             case ${tokens[0]} in
             description)
@@ -602,6 +605,7 @@ cmd_exe_play() {
                 ;;
             esac
         fi
+        display_log "$play_log" "$goal_log"
         play+=("$command")
         compare_repos
         if [[ $pass == true ]]; then

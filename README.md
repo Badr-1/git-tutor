@@ -12,6 +12,17 @@ The Whole Idea of it is to create an abstraction for git commands to use them wi
 To install `git-tutor` copy it to a directory included in your `$PATH`.
 This allows you to use it either by `git tutor` as a git extension or `git-tutor` as a regular command.
 
+Or Use Installation Scripts.
+
+Linux
+``` bash
+curl -sSL https://raw.githubusercontent.com/Badr-1/git-tutor/main/install.sh | bash
+```
+Windows
+```powershell
+irm https://raw.githubusercontent.com/Badr-1/git-tutor/main/install.ps1 | iex
+```
+
 ## Usage
 
 ```

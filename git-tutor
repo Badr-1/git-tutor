@@ -10,6 +10,8 @@ readonly CYAN='\033[1;36m'
 readonly GRAY='\033[1;90m'
 readonly NC='\033[0m' # No Color
 
+# Helper Functions
+
 print_section_header() {
     local title=$1
     echo -en "${PURPLE}$title${NC}\n"
@@ -23,6 +25,204 @@ handle_error() {
         exit $exit_code
     fi
 }
+
+game_prompt() {
+    local level=$1
+    if [[ $level == false ]]; then
+        echo -en "${YELLOW}> "
+        echo -en "${BLUE} "
+        return
+    fi
+    if (($commands_cnt < $level_commands_cnt)); then
+        echo -en "${GREEN}($commands_cnt/$level_commands_cnt)${NC}"
+    else
+        echo -en "${RED}($commands_cnt/$level_commands_cnt)${NC}"
+    fi
+    echo -en "${YELLOW}> "
+    echo -en "${BLUE} "
+}
+
+compare_repos() {
+    echo -ne "${NC}"
+    local play_log="$(log --all)"
+    if [[ "$play_log" == "$goal_log" ]]; then
+        pass=true
+    else
+        pass=false
+    fi
+}
+
+cleanup() {
+    cd .. >/dev/null 2>&1
+    rm -rf goal play
+}
+
+display_log() {
+    local play="$1"
+    local goal="$2"
+
+    play_display=$(print_section_header "Loading Play\n")
+    play_display+="$play"
+    goal_display=$(print_section_header "Loading Goal\n")
+    goal_display+="$goal"
+
+    # Create temporary files for strings
+    temp1=$(mktemp)
+    temp2=$(mktemp)
+
+    # Convert strings to lines by replacing newlines and write to temp files
+    echo -e "$play_display" >"$temp1"
+    echo -e "$goal_display" >"$temp2"
+
+    # Get the length of both string arrays
+    len1=$(wc -l <"$temp1")
+    len2=$(wc -l <"$temp2")
+
+    # Find the maximum length
+    max_len=$((len1 > len2 ? len1 : len2))
+
+    # Add padding to strings and combine with vertical separator
+    paste <(
+        cat "$temp1"
+        if [ $len1 -lt $max_len ]; then yes "" | head -n $((max_len - len1)); fi
+    ) \
+        <(yes "|" | head -n $max_len) \
+        <(
+            cat "$temp2"
+            if [ $len2 -lt $max_len ]; then yes "" | head -n $((max_len - len2)); fi
+        ) |
+        column -t -s $'\t'
+
+    # Clean up temporary files
+    rm "$temp1" "$temp2"
+}
+
+# Freestyle Mode
+
+setup_free_play() {
+    local goal=$1
+    cd $goal
+    goal_log=$(log --all)
+    cd ..
+    cp -r $base play
+    cd play
+    play_log=$(log --all)
+    display_log "$play_log" "$goal_log"
+
+}
+
+figure_commit_cnt() {
+    commits_cnt=0
+    message="C$commits_cnt"
+    while ! git tag "$message" 2>/dev/null; do
+        commits_cnt=$((commits_cnt + 1))
+        message="C$commits_cnt"
+    done
+    git tag -d "$message" >/dev/null 2>&1
+}
+
+# Play Mode
+choose_level() {
+    selected_level=""
+    levels_description
+    while true; do
+        echo -e "${CYAN}Enter the level name to proceed ${RED}(type exit to quit)"
+        game_prompt false
+        read -r choice
+        if [[ ! "$choice" =~ ^[0-9]+$ ]] || ((choice < 1 || choice > ${#levels_titles[@]})); then
+            if [[ "$choice" == 'exit' ]]; then
+                exit 0
+            else
+                echo -e "${RED}Invalid level number. Please try again.${NC}"
+            fi
+        else
+            break
+        fi
+    done
+    choice=$((choice - 1))
+    selected_level="${levels_titles[choice]}"
+}
+
+level_setup() {
+    local level_name=$1
+    levels $level_name
+    level_commands_cnt=$((${#goal[@]} - ${#base[@]}))
+    cmd_exe_load 'goal' "${goal[@]}"
+    goal_log=$(log --all)
+    cd ..
+    cmd_exe_load 'play' "${base[@]}"
+    play_log=$(log --all)
+    display_log "$play_log" "$goal_log"
+}
+
+# Plugin Management
+
+load_plugin() {
+    local plugin_file=$1
+    source "$plugin_file"
+    if ! declare -F plugin_init >/dev/null ||
+        ! declare -F levels_description >/dev/null ||
+        ! declare -F levels >/dev/null; then
+        echo -e "${RED}Error: Invalid plugin format in $plugin_file${NC}"
+        echo -e "${RED}Plugin must define plugin_init, levels_description, and levels functions${NC}"
+        return 1
+    fi
+    IFS='|' read -r plugin_name plugin_description plugin_version plugin_author < <(plugin_init)
+    echo -e "${GREEN}Loaded plugin: $plugin_name v$plugin_version${NC}"
+    echo -e "${GRAY}$plugin_description${NC}"
+    echo -e "${GRAY}Created by: $plugin_author${NC}"
+    return 0
+}
+
+install_plugins() {
+    plugins=($(ls ~/.git-tutor/*.gt 2>/dev/null))
+
+    if [ ${#plugins[@]} -eq 0 ]; then
+        echo -e "${CYAN}No plugins found in ~/.git-tutor${NC}"
+        exit 1
+    fi
+
+    echo -e "${CYAN}Available Plugins:${NC}"
+    for i in "${!plugins[@]}"; do
+        plugin_file="${plugins[$i]}"
+
+        # Source temporarily to get metadata
+        (
+            source "$plugin_file"
+            if declare -F plugin_init >/dev/null; then
+                IFS='|' read -r name description version author < <(plugin_init)
+                echo -e "${YELLOW}[$((i + 1))] $name v$version${NC}"
+                echo -e "   ${GRAY}$description${NC}"
+                echo -e "   ${GRAY}Author: $author${NC}"
+            else
+                echo -e "${YELLOW}[$((i + 1))] $(basename "$plugin_file")${NC}"
+                echo -e "   ${GRAY}(No metadata available)${NC}"
+            fi
+        )
+    done
+    while true; do
+        echo -e "${CYAN}Enter the number of the plugin to use ${RED}(type exit to quit)"
+        game_prompt false
+        read -r choice
+        if [[ ! "$choice" =~ ^[0-9]+$ ]] || ((choice < 1 || choice > ${#plugins[@]})); then
+            if [[ "$choice" == 'exit' ]]; then
+                exit 0
+            else
+                echo -e "${RED}Invalid plugin number. Please try again.${NC}"
+            fi
+        else
+            break
+        fi
+    done
+    choice=$((choice - 1))
+    selected_plugin="${plugins[choice]}"
+    if ! load_plugin "$selected_plugin"; then
+        echo -e "${RED}Failed to load plugin. Please check its format.${NC}"
+        exit 1
+    fi
+}
+
+# Git Functions
 
 commit() {
     local amend=$1
@@ -152,6 +352,8 @@ rebase() {
         handle_error $? "Failed to create tag for rebased commit: $message"
     done
 }
+
+# Command Executors
 
 cmd_exe_sandbox() {
     commits_cnt=0
@@ -289,99 +491,6 @@ cmd_exe_load() {
             ;;
         esac
     done
-}
-
-game_prompt() {
-    local level=$1
-    if [[ $level == false ]]; then
-        echo -en "${YELLOW}> "
-        echo -en "${BLUE} "
-        return
-    fi
-    if (($commands_cnt < $level_commands_cnt)); then
-        echo -en "${GREEN}($commands_cnt/$level_commands_cnt)${NC}"
-    else
-        echo -en "${RED}($commands_cnt/$level_commands_cnt)${NC}"
-    fi
-    echo -en "${YELLOW}> "
-    echo -en "${BLUE} "
-}
-
-compare_repos() {
-    echo -ne "${NC}"
-    local play_log="$(log --all)"
-    if [[ "$play_log" == "$goal_log" ]]; then
-        pass=true
-    else
-        pass=false
-    fi
-}
-
-cleanup() {
-    cd .. >/dev/null 2>&1
-    rm -rf goal play
-}
-
-display_log() {
-    local play="$1"
-    local goal="$2"
-
-    play_display=$(print_section_header "Loading Play\n")
-    play_display+="$play"
-    goal_display=$(print_section_header "Loading Goal\n")
-    goal_display+="$goal"
-
-    # Create temporary files for strings
-    temp1=$(mktemp)
-    temp2=$(mktemp)
-
-    # Convert strings to lines by replacing newlines and write to temp files
-    echo -e "$play_display" >"$temp1"
-    echo -e "$goal_display" >"$temp2"
-
-    # Get the length of both string arrays
-    len1=$(wc -l <"$temp1")
-    len2=$(wc -l <"$temp2")
-
-    # Find the maximum length
-    max_len=$((len1 > len2 ? len1 : len2))
-
-    # Add padding to strings and combine with vertical separator
-    paste <(
-        cat "$temp1"
-        if [ $len1 -lt $max_len ]; then yes "" | head -n $((max_len - len1)); fi
-    ) \
-        <(yes "|" | head -n $max_len) \
-        <(
-            cat "$temp2"
-            if [ $len2 -lt $max_len ]; then yes "" | head -n $((max_len - len2)); fi
-        ) |
-        column -t -s $'\t'
-
-    # Clean up temporary files
-    rm "$temp1" "$temp2"
-}
-
-setup_free_play() {
-    local goal=$1
-    cd $goal
-    goal_log=$(log --all)
-    cd ..
-    cp -r $base play
-    cd play
-    play_log=$(log --all)
-    display_log "$play_log" "$goal_log"
-
-}
-
-figure_commit_cnt() {
-    commits_cnt=0
-    message="C$commits_cnt"
-    while ! git tag "$message" 2>/dev/null; do
-        commits_cnt=$((commits_cnt + 1))
-        message="C$commits_cnt"
-    done
-    git tag -d "$message" >/dev/null 2>&1
 }
 
 cmd_exe_free() {
@@ -623,20 +732,7 @@ cmd_exe_play() {
     cleanup
 }
 
-level_setup() {
-    local level_name=$1
-    levels $level_name
-    level_commands_cnt=$((${#goal[@]} - ${#base[@]}))
-    cmd_exe_load 'goal' "${goal[@]}"
-    goal_log=$(log --all)
-    cd ..
-    cmd_exe_load 'play' "${base[@]}"
-    play_log=$(log --all)
-    display_log "$play_log" "$goal_log"
-}
-
 show_help() {
-
     echo -e "
 ${GREEN}Usage:${NC}
   ${YELLOW}git-tutor play${NC}                  Start playing a specific level
@@ -665,92 +761,6 @@ ${GREEN}Tool Commands:${NC}
   ${YELLOW}help${NC}                            Show this help message
   ${YELLOW}exit${NC}                            Exit the game
 "
-}
-
-load_plugin() {
-    local plugin_file=$1
-    source "$plugin_file"
-    if ! declare -F plugin_init >/dev/null ||
-        ! declare -F levels_description >/dev/null ||
-        ! declare -F levels >/dev/null; then
-        echo -e "${RED}Error: Invalid plugin format in $plugin_file${NC}"
-        echo -e "${RED}Plugin must define plugin_init, levels_description, and levels functions${NC}"
-        return 1
-    fi
-    IFS='|' read -r plugin_name plugin_description plugin_version plugin_author < <(plugin_init)
-    echo -e "${GREEN}Loaded plugin: $plugin_name v$plugin_version${NC}"
-    echo -e "${GRAY}$plugin_description${NC}"
-    echo -e "${GRAY}Created by: $plugin_author${NC}"
-    return 0
-}
-
-install_plugins() {
-    plugins=($(ls ~/.git-tutor/*.gt 2>/dev/null))
-
-    if [ ${#plugins[@]} -eq 0 ]; then
-        echo -e "${CYAN}No plugins found in ~/.git-tutor${NC}"
-        exit 1
-    fi
-
-    echo -e "${CYAN}Available Plugins:${NC}"
-    for i in "${!plugins[@]}"; do
-        plugin_file="${plugins[$i]}"
-
-        # Source temporarily to get metadata
-        (
-            source "$plugin_file"
-            if declare -F plugin_init >/dev/null; then
-                IFS='|' read -r name description version author < <(plugin_init)
-                echo -e "${YELLOW}[$((i + 1))] $name v$version${NC}"
-                echo -e "   ${GRAY}$description${NC}"
-                echo -e "   ${GRAY}Author: $author${NC}"
-            else
-                echo -e "${YELLOW}[$((i + 1))] $(basename "$plugin_file")${NC}"
-                echo -e "   ${GRAY}(No metadata available)${NC}"
-            fi
-        )
-    done
-    while true; do
-        echo -e "${CYAN}Enter the number of the plugin to use ${RED}(type exit to quit)"
-        game_prompt false
-        read -r choice
-        if [[ ! "$choice" =~ ^[0-9]+$ ]] || ((choice < 1 || choice > ${#plugins[@]})); then
-            if [[ "$choice" == 'exit' ]]; then
-                exit 0
-            else
-                echo -e "${RED}Invalid plugin number. Please try again.${NC}"
-            fi
-        else
-            break
-        fi
-    done
-    choice=$((choice - 1))
-    selected_plugin="${plugins[choice]}"
-    if ! load_plugin "$selected_plugin"; then
-        echo -e "${RED}Failed to load plugin. Please check its format.${NC}"
-        exit 1
-    fi
-}
-
-choose_level() {
-    selected_level=""
-    levels_description
-    while true; do
-        echo -e "${CYAN}Enter the level name to proceed ${RED}(type exit to quit)"
-        game_prompt false
-        read -r choice
-        if [[ ! "$choice" =~ ^[0-9]+$ ]] || ((choice < 1 || choice > ${#levels_titles[@]})); then
-            if [[ "$choice" == 'exit' ]]; then
-                exit 0
-            else
-                echo -e "${RED}Invalid level number. Please try again.${NC}"
-            fi
-        else
-            break
-        fi
-    done
-    choice=$((choice - 1))
-    selected_level="${levels_titles[choice]}"
 }
 
 main() {

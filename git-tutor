@@ -486,6 +486,7 @@ cmd_exe_free() {
         compare_repos
         if [[ $pass == true ]]; then
             echo -ne "${GREEN}🎉 Congratulations!${NC}\n"
+            echo -e "${YELLOW} You've used '$commands_cnt' commands to reach the goal${NC}"
             break
         fi
         game_prompt false

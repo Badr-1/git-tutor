@@ -309,16 +309,8 @@ game_prompt() {
 
 compare_repos() {
     echo -ne "${NC}"
-    local play_dir="../$1"
-    local goal_dir="../$2"
-
-    [[ ! -d "$play_dir" ]] && echo "Play directory not found" && return 1
-    [[ ! -d "$goal_dir" ]] && echo "Goal directory not found" && return 1
-
-    local play_out="$(cd "$play_dir" && log --all)"
-    local goal_out="$(cd "$goal_dir" && log --all)"
-
-    if [[ "$play_out" == "$goal_out" ]]; then
+    local play_log="$(log --all)"
+    if [[ "$play_log" == "$goal_log" ]]; then
         pass=true
     else
         pass=false
@@ -331,26 +323,21 @@ cleanup() {
 }
 
 display_log() {
-    local play=$1
-    local goal=$2
+    local play="$1"
+    local goal="$2"
 
-    cd $play
-    play_log=$(print_section_header "Loading Play\n")
-    play_log+="$(log --all)"
-    cd ..
-
-    cd $goal
-    goal_log=$(print_section_header "Loading Goal\n")
-    goal_log+="$(log --all)"
-    cd ..
+    play_display=$(print_section_header "Loading Play\n")
+    play_display+="$play"
+    goal_display=$(print_section_header "Loading Goal\n")
+    goal_display+="$goal"
 
     # Create temporary files for strings
     temp1=$(mktemp)
     temp2=$(mktemp)
 
     # Convert strings to lines by replacing newlines and write to temp files
-    echo -e "$play_log" >"$temp1"
-    echo -e "$goal_log" >"$temp2"
+    echo -e "$play_display" >"$temp1"
+    echo -e "$goal_display" >"$temp2"
 
     # Get the length of both string arrays
     len1=$(wc -l <"$temp1")
@@ -377,9 +364,14 @@ display_log() {
 
 setup_free_play() {
     local goal=$1
+    cd $goal
+    goal_log=$(log --all)
+    cd ..
     cp -r $base play
-    display_log play $goal
     cd play
+    play_log=$(log --all)
+    display_log "$play_log" "$goal_log"
+
 }
 
 figure_commit_cnt() {
@@ -395,7 +387,7 @@ figure_commit_cnt() {
 cmd_exe_free() {
     local base=$1
     local goal=$2
-    setup_free_play $goal
+    setup_free_play "$goal"
     figure_commit_cnt
     exec 3<&0
     game_prompt false
@@ -462,9 +454,7 @@ cmd_exe_free() {
                 ;;
             clear)
                 clear
-                cd ..
-                display_log play $goal
-                cd play
+                display_log "$play_log" "$goal_log"
                 game_prompt false
                 continue
                 ;;
@@ -472,7 +462,7 @@ cmd_exe_free() {
                 clear
                 cd ..
                 rm -rf play
-                setup_free_play $goal
+                setup_free_play "$goal"
                 figure_commit_cnt
                 game_prompt false
                 continue
@@ -493,7 +483,7 @@ cmd_exe_free() {
             esac
         fi
         play+=("$command")
-        compare_repos play $goal
+        compare_repos
         if [[ $pass == true ]]; then
             echo -ne "${GREEN}🎉 Congratulations!${NC}\n"
             break
@@ -576,11 +566,13 @@ cmd_exe_play() {
                 old_commits_cnt=$commits_cnt
                 old_commands_cnt=$commands_cnt
                 cmd_exe_load 'goal' "${goal[@]}"
+                goal_log=$(log --all)
                 cd ..
                 commits_cnt=$old_commits_cnt
                 commands_cnt=$old_commands_cnt
-                display_log play goal
                 cd play
+                play_log=$(log --all)
+                display_log "$play_log" "$goal_log"
                 game_prompt true
                 continue
                 ;;
@@ -610,7 +602,7 @@ cmd_exe_play() {
             esac
         fi
         play+=("$command")
-        compare_repos play goal
+        compare_repos
         if [[ $pass == true ]]; then
             echo -ne "${GREEN}🎉 Congratulations!${NC}\n"
             cleanup
@@ -633,11 +625,11 @@ level_setup() {
     levels $level_name
     level_commands_cnt=$((${#goal[@]} - ${#base[@]}))
     cmd_exe_load 'goal' "${goal[@]}"
+    goal_log=$(log --all)
     cd ..
     cmd_exe_load 'play' "${base[@]}"
-    cd ..
-    display_log play goal
-    cd play
+    play_log=$(log --all)
+    display_log "$play_log" "$goal_log"
     play=("${base[@]}")
 }
 

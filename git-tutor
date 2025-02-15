@@ -255,9 +255,9 @@ log() {
             awk -v yellow="$YELLOW" -v green="$GREEN" -v blue="$BLUE" -v nc="$NC" '
     {
         gsub(/\*/, yellow "&" nc);
+        gsub(/\/|\\|\|/, blue "&" nc);
         gsub(/\(.*\)/, green "&" nc);
-        sub(/\) /, blue);
-        print blue $0 nc;
+        print $0;
     }'
     else
         git log --graph --decorate=short --pretty=format:"%d %s" 2>/dev/null |
@@ -267,9 +267,9 @@ log() {
             awk -v yellow="$YELLOW" -v green="$GREEN" -v blue="$BLUE" -v nc="$NC" '
     {
         gsub(/\*/, yellow "&" nc);
+        gsub(/\/|\\|\|/, blue "&" nc);
         gsub(/\(.*\)/, green "&" nc);
-        sub(/\) /, blue);
-        print blue $0 nc;
+        print $0;
     }'
 
     fi

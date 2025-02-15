@@ -484,7 +484,6 @@ cmd_exe_free() {
             esac
         fi
         display_log "$play_log" "$goal_log"
-        play+=("$command")
         compare_repos
         if [[ $pass == true ]]; then
             echo -ne "${GREEN}🎉 Congratulations!${NC}\n"
@@ -606,7 +605,6 @@ cmd_exe_play() {
             esac
         fi
         display_log "$play_log" "$goal_log"
-        play+=("$command")
         compare_repos
         if [[ $pass == true ]]; then
             echo -ne "${GREEN}🎉 Congratulations!${NC}\n"
@@ -635,7 +633,6 @@ level_setup() {
     cmd_exe_load 'play' "${base[@]}"
     play_log=$(log --all)
     display_log "$play_log" "$goal_log"
-    play=("${base[@]}")
 }
 
 show_help() {

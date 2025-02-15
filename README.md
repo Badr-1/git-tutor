@@ -1,3 +1,7 @@
+<div align="center">
+    <img src="logo.png" width="456" height="228" >
+</div>
+
 # git-tutor
 
 I like git, that's not a secret now, I've built git extensions to help me explain it better before, but this one is special, I enjoyed using [learn git branching](https://learngitbranching.js.org/) but I didn't like that I had to open the web for it, after all git is a cli-tool, so why not create one for the cli, and here it's `git-tutor` the name is inspired from `vimtutor`, obviously.

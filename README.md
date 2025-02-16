@@ -70,7 +70,7 @@ Each level consists of the following:
 - Goal
 - Base
 
-Levels are now bundled outside `git-tutor` for extensibility into plugins see [plugin.gt](/plugin.gt) with extension `gt` and put into `~/.git-tutor` directory.
+Levels are now bundled outside `git-tutor` for extensibility into plugins see [template.gt](/template.gt) with extension `gt` and put into `~/.git-tutor` directory.
 
 ### Second: New Commands
 The available commands now aren't much, and commands options aren't fully implemented.\

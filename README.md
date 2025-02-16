@@ -80,10 +80,11 @@ Few Notes when adding new Command or option
   - first: in the sandbox mode
   - second: create a level with it, to see if it works properly
 
-There are three places where the commands are added to:
+There are fours places where the commands are added to:
 1. `cmd_exe_sandbox`: for sandbox mode
 2. `cmd_exe_load`: for loading levels
-3. `cmd_exe_play`: for playing levels
+3. `cmd_exe_play`: for playing level
+4. `cmd_exe_free`: for freestyle mode
 
 And into the `help` with its description.
 
